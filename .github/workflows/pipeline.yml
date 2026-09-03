@@ -25,6 +25,9 @@ jobs:
         env:
           COMMIT_MESSAGES: ${{ toJson(github.event.commits.*.message) }}
         run: echo "$COMMIT_MESSAGES"
+      - name: Test condition
+        if: contains(join(github.event.commits.*.message), '#skip') == false
+        run: echo '🟢 deployed'
   simple_deployment_pipeline:
     runs-on: ubuntu-latest
     steps:
