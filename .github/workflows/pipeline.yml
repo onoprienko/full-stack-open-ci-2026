@@ -51,6 +51,20 @@ jobs:
       - name: Trigger deployment
         if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message), '#skip') }}
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
+      - uses: sarisia/actions-status-discord@v1
+        if: success()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          content: '✅ Deployment Successful!'
+          color: 0x0000ff
+      - uses: sarisia/actions-status-discord@v1
+        if: failure()
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
+          content: '❌ Build Failed!'
+          color: 0xff0000
   tag_release:
     needs: [simple_deployment_pipeline]
     runs-on: ubuntu-latest
