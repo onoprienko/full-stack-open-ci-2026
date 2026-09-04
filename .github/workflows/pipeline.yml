@@ -9,27 +9,7 @@ on:
     types: [opened, synchronize]
 
 jobs:
-  a_test_job:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: github context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-      - name: commits
-        env:
-          COMMITS: ${{ toJson(github.event.commits) }}
-        run: echo "$COMMITS"
-      - name: commit messages
-        env:
-          COMMIT_MESSAGES: ${{ toJson(github.event.commits.*.message) }}
-        run: echo "$COMMIT_MESSAGES"
-          echo ${{ !contains(join(github.event.commits.*.message), '#skip') }}
-      - name: Test condition
-        if: ${{ !contains(join(github.event.commits.*.message), '#skip') }}
-        run: echo '🟢 deployed'
-  simple_deployment_pipeline:
+  build_and_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -48,9 +28,25 @@ jobs:
         run: npx playwright install --with-deps
       - name: Run Playwright tests
         run: npm run test:e2e
+  deploy:
+    needs: [build_and_test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
       - name: Trigger deployment
         if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message), '#skip') }}
         run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
+  notify_success:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
       - uses: sarisia/actions-status-discord@v1
         if: success() && github.event_name == 'push' && !contains(join(github.event.commits.*.message), '#skip')
         with:
@@ -58,6 +54,14 @@ jobs:
           status: ${{ job.status }}
           content: '✅ Deployment Successful!'
           color: 0x0000ff
+  notify_failure:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
       - uses: sarisia/actions-status-discord@v1
         if: failure() && github.event_name == 'push' && !contains(join(github.event.commits.*.message), '#skip')
         with:
@@ -66,7 +70,7 @@ jobs:
           content: '❌ Build Failed!'
           color: 0xff0000
   tag_release:
-    needs: [simple_deployment_pipeline]
+    needs: [deploy]
     runs-on: ubuntu-latest
     permissions:
       contents: write
