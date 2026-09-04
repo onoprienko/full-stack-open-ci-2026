@@ -1,4 +1,5 @@
 RENDER URL: https://full-stack-open-ci-2026.onrender.com/
+Exercise 21-22: https://github.com/onoprienko/full-stack-open-ci-2026-exercise-21
 
 # Full Stack open CI/CD
 
